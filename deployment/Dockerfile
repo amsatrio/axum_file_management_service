@@ -1,0 +1,48 @@
+# Build stage
+FROM rust:slim-bookworm AS builder
+
+WORKDIR /app
+
+COPY ../src . 
+COPY ../.env .
+COPY ../log4rs.yml .
+COPY ../Cargo.toml .
+COPY ../Cargo.lock .
+
+RUN apt-get update
+RUN apt-get install pkg-config -y
+RUN apt-get install libssl-dev -y
+RUN apt-get install default-libmysqlclient-dev libmariadb-dev -y
+RUN apt-get install openssl -y
+RUN apt-get install build-essential -y --no-install-recommends
+
+ENV cacheBUSTER v9001
+
+RUN cargo fetch
+RUN make build_release
+
+# Production stage
+FROM debian:bookworm-slim
+
+RUN apt-get update
+RUN apt-get install pkg-config -y
+RUN apt-get install libssl-dev -y
+RUN apt-get install default-libmysqlclient-dev libmariadb-dev -y
+RUN apt-get install openssl -y
+RUN apt-get install build-essential -y --no-install-recommends
+RUN rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/axum_file_management_service
+
+COPY --from=builder /app/target/release/axum_file_management_service .
+COPY --from=builder /app/static static/
+COPY --from=builder /app/templates templates/
+COPY --from=builder /app/.env .
+COPY --from=builder /app/log4rs.yml .
+RUN mkdir /opt/axum_file_management_service/logs
+
+
+
+
+# Run app
+CMD ["/opt/axum_file_management/axum_file_management_service"]
