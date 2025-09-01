@@ -9,7 +9,7 @@ use validator::ValidationErrors;
 
 use crate::dto::response::app_response::AppResponse;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AppError {
     InvalidRequest(ValidationErrors),
     DataExist,

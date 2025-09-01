@@ -1,0 +1,56 @@
+@base_url=http://localhost:8003
+@id=1001
+
+### GET download file by ID
+GET {{base_url}}/m-file/file/{{id}}
+
+### DELETE remove file by ID
+DELETE {{base_url}}/m-file/file/{{id}}
+
+
+
+### POST upload file then insert data
+POST {{base_url}}/m-file/file
+Content-Type: multipart/form-data; boundary="my_boundary"
+
+--my_boundary
+Content-Disposition: form-data; name="payload"
+Content-Type: application/json
+
+{
+    "id": {{id}},
+    "file_name": "asasasas",
+    "file_type": "document",
+    "file_path": null,
+    "is_delete": false
+}
+--my_boundary
+Content-Disposition: form-data; name="file"; filename="tes.jpg"
+Content-Type: image/jpeg
+
+< /home/mos/Pictures/tes.jpg
+--my_boundary--
+
+
+
+### PUT upload file then update data
+PUT {{base_url}}/m-file/file
+Content-Type: multipart/form-data; boundary="my_boundary"
+
+--my_boundary
+Content-Disposition: form-data; name="payload"
+Content-Type: application/json
+
+{
+    "id": {{id}},
+    "file_name": "tes.jpg",
+    "file_type": null,
+    "file_path": null,
+    "is_delete": false
+}
+--my_boundary
+Content-Disposition: form-data; name="file"; filename="tes.jpg"
+Content-Type: image/jpeg
+
+< /home/mos/Pictures/tes.jpg
+--my_boundary--
