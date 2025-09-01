@@ -10,7 +10,7 @@ COPY . .
 ENV cacheALPINE v9001
 
 RUN cargo fetch
-RUN mkdir logs
+RUN mkdir -p ./{logs,templates,static}
 RUN make build_release
 
 # Production stage
