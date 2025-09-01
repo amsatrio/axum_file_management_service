@@ -4,9 +4,9 @@ services:
     image: amsatrio/axum_file_management_service:0.0.1
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.debian
     ports:
-      - "8001:8001"
+      - "8003:8003"
     #network_mode: "host"
     networks:
       - sql-database

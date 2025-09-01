@@ -1,0 +1,30 @@
+# Build stage
+FROM rust:alpine AS builder
+
+RUN apk add --no-cache pkgconfig openssl-dev mariadb-dev
+
+WORKDIR /app
+
+COPY . .
+
+ENV cacheALPINE v9001
+
+RUN cargo fetch
+RUN make build_release
+
+# Production stage
+FROM alpine:latest
+
+RUN apk add --no-cache pkgconfig openssl mariadb-dev
+
+WORKDIR /opt/axum_file_management_service
+
+COPY --from=builder /app/target/release/axum_file_management_service .
+COPY --from=builder /app/static static/
+COPY --from=builder /app/templates templates/
+COPY --from=builder /app/.env .
+COPY --from=builder /app/log4rs.yml .
+RUN mkdir -p /opt/axum_file_management_service/logs
+
+# Run app
+CMD ["/opt/axum_file_management_service/axum_file_management_service"]
