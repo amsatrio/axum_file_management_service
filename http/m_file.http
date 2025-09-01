@@ -1,0 +1,60 @@
+@base_url=http://localhost:8003
+@id=1001
+
+###
+GET {{base_url}}/m-file/list
+Content-Type: application/json
+###
+GET {{base_url}}/m-file/{{id}}
+Content-Type: application/json
+
+
+###
+POST {{base_url}}/m-file
+Content-Type: application/json
+
+{
+    "id": {{id}},
+    "file_name": "asas",
+    "file_type": "document",
+    "file_path": null,
+    "is_delete": false
+}
+###
+PUT {{base_url}}/m-file
+Content-Type: application/json
+
+{
+    "id": {{id}},
+    "file_name": "asasasas",
+    "file_type": "document",
+    "file_path": null,
+    "is_delete": false
+}
+###
+###
+DELETE {{base_url}}/m-file/{{id}}
+Content-Type: application/json
+
+###
+GET {{base_url}}/m-file/pagination?page=0&size=5
+Content-Type: application/json
+
+
+### POST upload
+POST {{base_url}}/m-file/upload
+Content-Type: multipart/form-data; boundary="my_boundary"
+
+--my_boundary
+Content-Disposition: form-data; name="token"
+
+test token
+--my_boundary
+Content-Disposition: form-data; name="file"; filename="tes.jpg"
+Content-Type: image/jpeg
+
+< /home/mos/Pictures/tes.jpg
+--my_boundary--
+
+###
+GET {{base_url}}/m-file/download?id=1756725657
