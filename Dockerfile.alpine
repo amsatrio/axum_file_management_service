@@ -16,7 +16,7 @@ RUN make build_release
 # Production stage
 FROM alpine:latest
 
-RUN apk add --no-cache pkgconfig openssl mariadb-dev make
+RUN apk add --no-cache pkgconfig openssl mariadb-dev build-base
 
 WORKDIR /opt/axum_file_management_service
 
