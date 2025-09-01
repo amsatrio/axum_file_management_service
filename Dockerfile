@@ -3,11 +3,7 @@ FROM rust:slim-bookworm AS builder
 
 WORKDIR /app
 
-COPY ../src . 
-COPY ../.env .
-COPY ../log4rs.yml .
-COPY ../Cargo.toml .
-COPY ../Cargo.lock .
+COPY . . 
 
 RUN apt-get update
 RUN apt-get install pkg-config -y
