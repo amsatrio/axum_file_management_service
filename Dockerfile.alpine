@@ -1,7 +1,7 @@
 # Build stage
 FROM rust:alpine AS builder
 
-RUN apk add --no-cache pkgconfig openssl-dev mariadb-dev
+RUN apk add --no-cache pkgconfig openssl-dev mariadb-dev build-base libc-dev postgresql-dev gcc musl-dev make
 
 WORKDIR /app
 
@@ -10,13 +10,15 @@ COPY . .
 ENV cacheALPINE v9001
 
 RUN cargo fetch
-RUN mkdir -p ./{logs,templates,static}
+RUN mkdir -p logs
+RUN mkdir -p static
+RUN mkdir -p templates
 RUN make build_release
 
 # Production stage
 FROM alpine:latest
 
-RUN apk add --no-cache pkgconfig openssl mariadb-dev build-base
+RUN apk add --no-cache pkgconfig openssl mariadb-dev postgresql-dev ca-certificates
 
 WORKDIR /opt/axum_file_management_service
 

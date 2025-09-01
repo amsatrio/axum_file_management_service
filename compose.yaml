@@ -16,6 +16,9 @@ services:
         hard: 65536
     deploy:
       replicas: 1
+    volumes:
+      - /root/.cargo:/root/.cargo
+      - /root/.m2:/root/.m2
 
 networks:
   sql-database:
