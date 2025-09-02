@@ -20,4 +20,4 @@ RUN mkdir logs/
 
 
 # Run app
-CMD ["/opt/axum_file_management/axum_file_management_service"]
+CMD ["/opt/axum_file_management_service/axum_file_management_service"]

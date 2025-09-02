@@ -6,15 +6,12 @@ WORKDIR /app
 COPY . . 
 
 RUN apt-get update
-RUN apt-get install pkg-config -y
-RUN apt-get install libssl-dev -y
-RUN apt-get install default-libmysqlclient-dev libmariadb-dev libpq-dev -y
-RUN apt-get install openssl -y
+RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq-dev openssl -y
 RUN apt-get install build-essential -y --no-install-recommends
 
 ENV cacheBUSTER v9001
 
-RUN cargo fetch
+#RUN cargo fetch
 RUN mkdir -p logs
 RUN mkdir -p static
 RUN mkdir -p templates
@@ -24,10 +21,7 @@ RUN make build_release
 FROM debian:bookworm-slim
 
 RUN apt-get update
-RUN apt-get install pkg-config -y
-RUN apt-get install libssl-dev -y
-RUN apt-get install default-libmysqlclient-dev libmariadb-dev libpq5 -y
-RUN apt-get install openssl -y
+RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq5 openssl -y
 RUN apt-get install build-essential -y --no-install-recommends
 RUN rm -rf /var/lib/apt/lists/*
 
@@ -44,4 +38,4 @@ RUN mkdir /opt/axum_file_management_service/logs
 
 
 # Run app
-CMD ["/opt/axum_file_management/axum_file_management_service"]
+CMD ["/opt/axum_file_management_service/axum_file_management_service"]

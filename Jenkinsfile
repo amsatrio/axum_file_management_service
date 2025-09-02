@@ -3,8 +3,7 @@ pipeline {
     stages {
         stage('Build') { 
             steps {
-                sh '. "/home/user0/.cargo/env"'
-                sh 'make build_release' 
+                sh 'docker compose up --build -d' 
             }
         }
     }
