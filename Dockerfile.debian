@@ -27,7 +27,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/axum_file_management_service
 
-COPY --from=builder /app/target/release/axum_file_management_service .
+COPY --from=builder /app/target/release/axum_file_management_service /opt/axum_file_management_service/
 COPY --from=builder /app/static static/
 COPY --from=builder /app/templates templates/
 COPY --from=builder /app/.env.docker .env
