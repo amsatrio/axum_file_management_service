@@ -23,9 +23,7 @@ RUN apk add --no-cache pkgconfig openssl mariadb-dev postgresql-dev ca-certifica
 WORKDIR /opt/axum_file_management_service
 
 COPY --from=builder /app/target/release/axum_file_management_service .
-COPY --from=builder /app/static static/
-COPY --from=builder /app/templates templates/
-COPY --from=builder /app/.env .
+COPY --from=builder /app/.env.docker .env
 COPY --from=builder /app/log4rs.yml .
 RUN mkdir -p /opt/axum_file_management_service/logs
 

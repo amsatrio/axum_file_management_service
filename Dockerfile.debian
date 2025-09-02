@@ -8,7 +8,7 @@ COPY . .
 RUN apt-get update
 RUN apt-get install pkg-config -y
 RUN apt-get install libssl-dev -y
-RUN apt-get install default-libmysqlclient-dev libmariadb-dev -y
+RUN apt-get install default-libmysqlclient-dev libmariadb-dev libpq-dev -y
 RUN apt-get install openssl -y
 RUN apt-get install build-essential -y --no-install-recommends
 
@@ -26,7 +26,7 @@ FROM debian:bookworm-slim
 RUN apt-get update
 RUN apt-get install pkg-config -y
 RUN apt-get install libssl-dev -y
-RUN apt-get install default-libmysqlclient-dev libmariadb-dev -y
+RUN apt-get install default-libmysqlclient-dev libmariadb-dev libpq5 -y
 RUN apt-get install openssl -y
 RUN apt-get install build-essential -y --no-install-recommends
 RUN rm -rf /var/lib/apt/lists/*
@@ -36,7 +36,7 @@ WORKDIR /opt/axum_file_management_service
 COPY --from=builder /app/target/release/axum_file_management_service .
 COPY --from=builder /app/static static/
 COPY --from=builder /app/templates templates/
-COPY --from=builder /app/.env .
+COPY --from=builder /app/.env.docker .env
 COPY --from=builder /app/log4rs.yml .
 RUN mkdir /opt/axum_file_management_service/logs
 

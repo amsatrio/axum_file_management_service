@@ -1,0 +1,14 @@
+# Production stage
+FROM alpine:latest
+
+RUN apk add --no-cache pkgconfig openssl mariadb-dev postgresql-dev ca-certificates
+
+WORKDIR /opt/axum_file_management_service
+
+COPY target/release/axum_file_management_service .
+COPY .env.docker .env
+COPY log4rs.yml .
+RUN mkdir -p logs/
+
+# Run app
+CMD ["/opt/axum_file_management_service/axum_file_management_service"]

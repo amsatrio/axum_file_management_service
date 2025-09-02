@@ -1,4 +1,8 @@
-# actix_crud
+# axum_file_management_service
+
+## Requirements
+### rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ## data manipulation
 
