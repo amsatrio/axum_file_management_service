@@ -15,7 +15,7 @@ ENV cacheBUSTER v9001
 RUN mkdir -p logs
 RUN mkdir -p static
 RUN mkdir -p templates
-RUN make build_release
+RUN cargo build --release
 
 # Production stage
 FROM debian:bookworm-slim
@@ -27,7 +27,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/axum_file_management_service
 
-COPY --from=builder /app/target/release/axum_file_management_service /opt/axum_file_management_service/
+COPY --from=builder /app/target/release/axum_file_management_service .
 COPY --from=builder /app/static static/
 COPY --from=builder /app/templates templates/
 COPY --from=builder /app/.env.docker .env
