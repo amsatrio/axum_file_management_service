@@ -9,7 +9,7 @@ RUN apt-get update
 RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq-dev openssl -y
 RUN apt-get install build-essential -y --no-install-recommends
 
-ENV cacheBUSTER v9001
+#ENV cacheBUSTER v9001
 
 #RUN cargo fetch
 RUN mkdir -p logs
