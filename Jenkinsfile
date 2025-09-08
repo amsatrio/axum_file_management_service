@@ -4,7 +4,7 @@ pipeline {
         stage('Build & Push to Local Registry') { 
             agent any
             steps {
-                sh 'docker compose build -f ./container/docker/compose.yaml'
+                sh 'docker compose -f ./container/docker/compose.yaml build'
                 sh 'docker tag axum-file-management-service localhost:4000/axum-file-management-service'
                 sh 'docker push localhost:4000/axum-file-management-service' 
             }
