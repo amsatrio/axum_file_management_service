@@ -18,17 +18,19 @@ RUN apt-get update
 RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq5 openssl -y
 RUN rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/axum_file_management_service
+WORKDIR /opt/axum_file_management
 
-COPY --from=builder /app/target/release/axum_file_management_service .
+COPY --from=builder /app/target/release/axum_file_management .
 COPY --from=builder /app/static static/
+COPY --from=builder /app/logs logs/
 COPY --from=builder /app/templates templates/
-COPY --from=builder /app/.env.docker .env
+COPY --from=builder /app/.env.kubernates .env
 COPY --from=builder /app/log4rs.yml .
-RUN mkdir /opt/axum_file_management_service/logs
+
+RUN mv /opt/axum_file_management/axum_file_management_service /opt/axum_file_management/app
 
 
 
 
 # Run app
-CMD ["/opt/axum_file_management_service/axum_file_management_service"]
+CMD ["/opt/axum_file_management/app"]

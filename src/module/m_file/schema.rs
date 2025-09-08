@@ -125,16 +125,22 @@ pub struct MFileRequest {
     pub file_path: Option<String>,
     #[validate(required(message = "mandatory"))]
     pub is_delete: Option<bool>,
+    #[validate(required(message = "mandatory"))]
+    pub module_name: Option<String>,
+    #[validate(required(message = "mandatory"))]
+    pub user_id: Option<i64>,
 }
 
 impl MFileRequest {
-    pub fn new(id: Option<i64>, file_name: Option<String>, file_type: Option<String>, file_path: Option<String>) -> MFileRequest {
+    pub fn new(id: Option<i64>, file_name: Option<String>, file_type: Option<String>, file_path: Option<String>, module_name: Option<String>, user_id: Option<i64>) -> MFileRequest {
         MFileRequest {
             id: id,
             file_name: file_name,
             file_type: file_type,
             file_path: file_path,
             is_delete: Some(false),
+            module_name: module_name,
+            user_id: user_id
         }
     }
 }

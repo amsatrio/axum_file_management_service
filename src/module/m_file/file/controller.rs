@@ -32,7 +32,7 @@ pub async fn create(
     let mut data: Bytes = <Bytes>::new();
     let mut file_name: String = String::new();
     let mut file_type: String = String::new();
-    let mut _m_file_request: MFileRequest = MFileRequest::new(None, None, None, None);
+    let mut _m_file_request: MFileRequest = MFileRequest::new(None, None, None, None, None, None);
 
     while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap().to_string();
@@ -94,14 +94,14 @@ pub async fn create(
 
     let today = Local::now();
     let date_string = format!(
-        "data/{}/{}/{:02}/{:02}",
+        "{}/{}/{:02}/{:02}",
         file_type,
         today.year(),
         today.month(),
         today.day()
     );
 
-    let file_path = format!("{}/{}", date_string, file_name);
+    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.unwrap_or("public"), _m_file_request.user_id.unwrap_or("guest"), date_string, file_name);
 
     // check existing file
     let result_file_exist = std::fs::exists(file_path.clone());
@@ -183,7 +183,7 @@ pub async fn update(
     let mut data: Bytes = <Bytes>::new();
     let mut file_name: String = String::new();
     let mut file_type: String = String::new();
-    let mut _m_file_request: MFileRequest = MFileRequest::new(None, None, None, None);
+    let mut _m_file_request: MFileRequest = MFileRequest::new(None, None, None, None, None, None);
 
     while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap().to_string();
@@ -245,14 +245,14 @@ pub async fn update(
 
     let today = Local::now();
     let date_string = format!(
-        "data/{}/{}/{:02}/{:02}",
+        "{}/{}/{:02}/{:02}",
         file_type,
         today.year(),
         today.month(),
         today.day()
     );
 
-    let file_path = format!("{}/{}", date_string, file_name);
+    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.unwrap_or("public"), _m_file_request.user_id.unwrap_or("guest"), date_string, file_name);
 
     // check existing file
     let result_file_exist = std::fs::exists(file_path.clone());
