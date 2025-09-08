@@ -16,7 +16,6 @@ FROM debian:bookworm-slim
 
 RUN apt-get update
 RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq5 openssl -y
-RUN apt-get install build-essential -y --no-install-recommends
 RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/axum_file_management_service

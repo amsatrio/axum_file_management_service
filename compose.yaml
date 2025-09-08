@@ -1,13 +1,12 @@
 services:
-  axum_file_management_service:
-    container_name: axum_file_management_service
-    image: amsatrio/axum_file_management_service
+  app:
+    container_name: axum-file-management-service
+    image: axum-file-management-service
     build:
       context: .
       dockerfile: Dockerfile.debian
     ports:
       - "8003:8003"
-    #network_mode: "host"
     networks:
       - sql-database
     ulimits:
@@ -16,9 +15,6 @@ services:
         hard: 65536
     deploy:
       replicas: 1
-    volumes:
-      - /root/.cargo:/root/.cargo
-      - /root/.m2:/root/.m2
 
 networks:
   sql-database:
