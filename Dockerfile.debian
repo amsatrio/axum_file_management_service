@@ -9,7 +9,7 @@ COPY . .
 RUN mkdir -p logs
 RUN mkdir -p static
 RUN mkdir -p templates
-RUN cargo build --release
+RUN RUST_BACKTRACE=1 cargo build --release
 
 # Production stage
 FROM debian:bookworm-slim
