@@ -7,7 +7,7 @@ spec:
     storage: 10Gi
   accessModes:
    - ReadWriteOnce 
-  persistenceVolumeReclaimPolicy: Retain
+  persistentVolumeReclaimPolicy: Retain
   hostPath:
     path: "/mnt/sdb"
 
