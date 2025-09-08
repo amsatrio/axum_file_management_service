@@ -1,8 +1,3 @@
-
----
-
-
----
 apiVersion:
 kind: PersistentVolume
 metadata:
@@ -15,6 +10,7 @@ spec:
   persistenceVolumeReclaimPolicy: Retain
   hostPath:
     path: "/mnt/sdb"
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -26,3 +22,4 @@ spec:
   resources:
     requests:
       storage: 10Gi
+

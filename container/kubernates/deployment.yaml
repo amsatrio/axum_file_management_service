@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axum-file-management
+  labels:
+    app: axum-file-management-app
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: axum-file-management-app
+  template:
+    metadata:
+      labels:
+        app: axum-file-management-app
+    spec:
+      volumes:
+        - name: axum-file-management-volume
+          persistentVolumeClaim: 
+            claimName: axum-file-management-pvc
+      containers:
+        - name: axum-file-management-container
+          image: localhost:4000/axum-file-management-service
+          ports:
+          - containerPort: 8003
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "1"
+          volumeMounts:
+            - name: axum-file-management-volume
+              mountPath: "/data"
