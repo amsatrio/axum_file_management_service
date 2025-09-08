@@ -101,7 +101,7 @@ pub async fn create(
         today.day()
     );
 
-    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.unwrap_or("public"), _m_file_request.user_id.unwrap_or("guest"), date_string, file_name);
+    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.unwrap_or("public".to_string()), _m_file_request.user_id.unwrap_or("guest".to_string()), date_string, file_name);
 
     // check existing file
     let result_file_exist = std::fs::exists(file_path.clone());
@@ -252,7 +252,7 @@ pub async fn update(
         today.day()
     );
 
-    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.unwrap_or("public"), _m_file_request.user_id.unwrap_or("guest"), date_string, file_name);
+    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.unwrap_or("public".to_string()), _m_file_request.user_id.unwrap_or("guest".to_string()), date_string, file_name);
 
     // check existing file
     let result_file_exist = std::fs::exists(file_path.clone());
