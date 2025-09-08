@@ -1,7 +1,7 @@
 services:
   axum_file_management_service:
     container_name: axum_file_management_service
-    image: amsatrio/axum_file_management_service:0.0.1
+    image: amsatrio/axum_file_management_service
     build:
       context: .
       dockerfile: Dockerfile.debian
