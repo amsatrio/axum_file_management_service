@@ -3,7 +3,18 @@ FROM localhost:4000/rust-builder AS builder
 
 WORKDIR /app
 
-COPY . . 
+# Copy the Cargo.toml and Cargo.lock files first. This is crucial for caching.
+# If these files don't change, Docker can reuse the cached layers for `cargo build`.
+COPY Cargo.toml Cargo.lock ./
+# A dummy build to download and cache dependencies.
+# This command doesn't create a binary, but it populates the Cargo cache.
+RUN mkdir -p src \
+    && echo "fn main() {println!(\"hello, world\");}" > src/main.rs \
+    && cargo build --release
+# Clean up the dummy main.rs and src directory to prepare for the actual code.
+RUN rm -rf src
+
+COPY . .
 
 #RUN cargo fetch
 RUN mkdir -p logs
