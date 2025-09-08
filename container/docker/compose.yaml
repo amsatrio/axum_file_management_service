@@ -4,7 +4,7 @@ services:
     image: axum-file-management-service
     build:
       context: ../../
-      dockerfile: Dockerfile.debian
+      dockerfile: container/docker/Dockerfile.debian
     ports:
       - "8003:8003"
     networks:
