@@ -9,8 +9,6 @@ pipeline {
                 sh 'docker push localhost:4000/axum-file-management-service' 
             }
         }
-    }
-    stages {
         stage('Kubernates Deployment') { 
             agent any
             steps {
