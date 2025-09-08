@@ -10,6 +10,7 @@ RUN mkdir -p logs
 RUN mkdir -p static
 RUN mkdir -p templates
 RUN RUST_BACKTRACE=1 cargo build --release
+RUN mv /app/target/release/axum_file_management_service /app/app
 
 # Production stage
 FROM debian:bookworm-slim
@@ -20,17 +21,12 @@ RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/axum_file_management
 
-COPY --from=builder /app/target/release/axum_file_management .
+COPY --from=builder /app/app .
 COPY --from=builder /app/static static/
 COPY --from=builder /app/logs logs/
 COPY --from=builder /app/templates templates/
 COPY --from=builder /app/.env.kubernates .env
 COPY --from=builder /app/log4rs.yml .
-
-RUN mv /opt/axum_file_management/axum_file_management_service /opt/axum_file_management/app
-
-
-
 
 # Run app
 CMD ["/opt/axum_file_management/app"]
