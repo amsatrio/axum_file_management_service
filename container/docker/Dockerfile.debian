@@ -39,5 +39,7 @@ COPY --from=builder /app/templates templates/
 COPY --from=builder /app/.env.kubernates .env
 COPY --from=builder /app/log4rs.yml .
 
+ENV RUST_BACKTRACE=full
+
 # Run app
 CMD ["/opt/axum_file_management/app"]
