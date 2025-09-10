@@ -19,7 +19,6 @@ pipeline {
             agent any
             steps {
  				  sh '''
-				  export KUBECONFIG=/home/jenkins/.kube/config
 				  kubectl apply -f container/kubernates/storage.yaml --validate=false
                   kubectl apply -f container/kubernates/service.yaml --validate=false
                   kubectl apply -f container/kubernates/deployment.yaml --validate=false
