@@ -11,7 +11,6 @@ use tokio::{
     fs::{File, remove_file},
     io::{AsyncReadExt, AsyncWriteExt},
 };
-use validator::Validate;
 
 use crate::{
     dto::{
@@ -20,7 +19,7 @@ use crate::{
     },
     module::m_file::{
         repository,
-        schema::{MFile, MFileRequest},
+        schema::MFile,
     },
     state::AppState,
 };
@@ -32,12 +31,14 @@ pub async fn create(
     let mut data: Bytes = <Bytes>::new();
     let mut file_name: String = String::new();
     let mut file_type: String = String::new();
-    let mut _m_file_request: MFileRequest = MFileRequest::new(None, None, None, None, None, None);
+    let mut module_id: i64 = 0;
+    let mut user_id: i64 = 0;
+    let mut id: i64 = 0;
 
     while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap().to_string();
+        let field_name = field.name().unwrap().to_string();
 
-        if name == "file".to_string() {
+        if field_name == "file".to_string() {
             file_name = field.file_name().unwrap_or("").to_string();
             file_type = field.content_type().unwrap_or("").to_string();
             data = field.bytes().await.unwrap();
@@ -62,23 +63,33 @@ pub async fn create(
 
             continue;
         }
-        if name == "payload".to_string() {
+        if field_name == "user_id".to_string() {
             let payload_tmp = field
                 .text()
                 .await
                 .map_err(|e| AppError::Other(e.to_string()))?;
+            user_id = payload_tmp.parse().unwrap();
 
-                _m_file_request = serde_json::from_str(&payload_tmp).map_err(|e| AppError::Other(e.to_string()))?;
+            continue;
+        }
+        if field_name == "id".to_string() {
+            let payload_tmp = field
+                .text()
+                .await
+                .map_err(|e| AppError::Other(e.to_string()))?;
+            id = payload_tmp.parse().unwrap();
+
+            continue;
+        }
+        if field_name == "module_id".to_string() {
+            let payload_tmp = field
+                .text()
+                .await
+                .map_err(|e| AppError::Other(e.to_string()))?;
+            module_id = payload_tmp.parse().unwrap();
             continue;
         }
     }
-
-    let _is_valid = match _m_file_request.validate() {
-        Ok(value) => value,
-        Err(error) => {
-            return Err(AppError::InvalidRequest(error).into());
-        }
-    };
 
     // get db connection
     let db_conn_result = _state.diesel_pool_mysql.get();
@@ -93,31 +104,37 @@ pub async fn create(
     };
 
     let today = Local::now();
-    let date_string = format!(
-        "{}/{}/{:02}/{:02}",
-        file_type,
-        today.year(),
-        today.month(),
-        today.day()
-    );
+    let _date_string = format!("{}/{:02}/{:02}", today.year(), today.month(), today.day());
 
-    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.clone().unwrap_or("public".to_string()), _m_file_request.user_id.unwrap_or(0), date_string, file_name);
+    let dir_path = format!("/data/{}/{}/{}", module_id, user_id, file_type);
+    let file_path = format!("{}/{}", dir_path, file_name);
+
+    let status_create_dir = std::fs::create_dir_all(dir_path);
+    if status_create_dir.is_err() {
+        log::info!("create dir failed");
+        return Err(AppError::InternalServerError);
+    }
 
     // check existing file
     let result_file_exist = std::fs::exists(file_path.clone());
-    if result_file_exist.is_err() {
-        return Err(AppError::InternalServerError);
-    }
-    if result_file_exist.unwrap() {
-        log::info!("file exist");
-        return Err(AppError::DataExist);
-    }
+    match result_file_exist {
+        Ok(_value) => {
+            if _value {
+                log::info!("file exist");
+                return Err(AppError::DataExist);
+            }
+        }
+        Err(_error) => {
+            return Err(AppError::Other(format!("find file error: {_error}")).into());
+        }
+    };
 
     // check existing data
-    let _existing_data_result = repository::find_by_id(&mut db_conn, _m_file_request.id.unwrap());
+    let _existing_data_result = repository::find_by_id(&mut db_conn, id);
     match _existing_data_result {
         Ok(None) => {}
         Ok(Some(_)) => {
+            log::info!("data exist");
             return Err(AppError::DataExist);
         }
         Err(_error) => {
@@ -126,12 +143,6 @@ pub async fn create(
             }
         }
     };
-
-    let status_create_dir = std::fs::create_dir_all(date_string);
-    if status_create_dir.is_err() {
-        log::info!("create dir failed");
-        return Err(AppError::InternalServerError);
-    }
 
     // create file
     let file = File::create(&file_path).await.map_err(|e| {
@@ -149,10 +160,7 @@ pub async fn create(
         return Err(AppError::InternalServerError);
     }
 
-    let mut new_m_file = MFile::from_create_request(_m_file_request);
-    new_m_file.file_path = Some(file_path);
-    new_m_file.file_type = Some(file_type);
-    new_m_file.file_name = Some(file_name);
+    let new_m_file = MFile::new(file_name, file_type, file_path, module_id, user_id);
 
     let result = repository::insert_mfile(&mut db_conn, new_m_file.clone());
 
@@ -183,12 +191,13 @@ pub async fn update(
     let mut data: Bytes = <Bytes>::new();
     let mut file_name: String = String::new();
     let mut file_type: String = String::new();
-    let mut _m_file_request: MFileRequest = MFileRequest::new(None, None, None, None, None, None);
+    let mut user_id: i64 = 0;
+    let mut id: i64 = 0;
 
     while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap().to_string();
+        let field_name = field.name().unwrap().to_string();
 
-        if name == "file".to_string() {
+        if field_name == "file".to_string() {
             file_name = field.file_name().unwrap_or("").to_string();
             file_type = field.content_type().unwrap_or("").to_string();
             data = field.bytes().await.unwrap();
@@ -213,23 +222,25 @@ pub async fn update(
 
             continue;
         }
-        if name == "payload".to_string() {
+        if field_name == "user_id".to_string() {
             let payload_tmp = field
                 .text()
                 .await
                 .map_err(|e| AppError::Other(e.to_string()))?;
+            user_id = payload_tmp.parse().unwrap();
 
-                _m_file_request = serde_json::from_str(&payload_tmp).map_err(|e| AppError::Other(e.to_string()))?;
+            continue;
+        }
+        if field_name == "id".to_string() {
+            let payload_tmp = field
+                .text()
+                .await
+                .map_err(|e| AppError::Other(e.to_string()))?;
+            id = payload_tmp.parse().unwrap();
+
             continue;
         }
     }
-
-    let _is_valid = match _m_file_request.validate() {
-        Ok(value) => value,
-        Err(error) => {
-            return Err(AppError::InvalidRequest(error).into());
-        }
-    };
 
     // get db connection
     let db_conn_result = _state.diesel_pool_mysql.get();
@@ -244,54 +255,45 @@ pub async fn update(
     };
 
     let today = Local::now();
-    let date_string = format!(
-        "{}/{}/{:02}/{:02}",
-        file_type,
-        today.year(),
-        today.month(),
-        today.day()
-    );
-
-    let file_path = format!("/data/{}/{}/{}/{}", _m_file_request.module_name.clone().unwrap_or("public".to_string()), _m_file_request.user_id.unwrap_or(0), date_string, file_name);
-
-    // check existing file
-    let result_file_exist = std::fs::exists(file_path.clone());
-    if result_file_exist.is_err() {
-        return Err(AppError::InternalServerError);
-    }
-    if result_file_exist.unwrap() {
-        // remove file
-        let file_path_buf = PathBuf::from(file_path.clone());
-        let _remove_file_result = remove_file(file_path_buf.clone())
-            .await
-            .map_err(|error| AppError::Other(format!("remove file failed: {}", error)))?;
-    }
+    let today_chrono = chrono::Utc::now().naive_utc();
 
     // check existing data
-    let mut _existing_data = MFile::new(String::new(), String::new(), String::new());
-    let _existing_data_result = repository::find_by_id(&mut db_conn, _m_file_request.id.unwrap());
+    let _existing_data_result = repository::find_by_id(&mut db_conn, id);
+    let mut _existing_data: MFile;
     match _existing_data_result {
         Ok(None) => {
+            log::info!("data not found");
             return Err(AppError::NotFound);
         }
         Ok(Some(_value)) => {
             _existing_data = _value;
         }
         Err(_error) => {
-            if _error != AppError::DataExist {
-                return Err(_error);
-            }
+            return Err(_error);
         }
     };
 
-    let status_create_dir = std::fs::create_dir_all(date_string);
-    if status_create_dir.is_err() {
-        log::info!("create dir failed");
-        return Err(AppError::InternalServerError);
-    }
+    let file_path = _existing_data.file_path.unwrap();
+
+    // check existing file
+    let result_file_exist = std::fs::exists(file_path.clone());
+    match result_file_exist {
+        Ok(_value) => {
+            if !_value {
+                log::info!("file not found");
+                return Err(AppError::DataExist);
+            }
+        }
+        Err(_error) => {
+            return Err(AppError::Other(format!("find file error: {_error}")).into());
+        }
+    };
+
+    // remove exsiting data
+    let _ = std::fs::remove_file(file_path.clone());
 
     // create file
-    let file = File::create(&file_path).await.map_err(|e| {
+    let file = File::create(file_path.clone()).await.map_err(|e| {
         log::error!("Failed to create file: {}", e);
     });
     if file.is_err() {
@@ -306,12 +308,13 @@ pub async fn update(
         return Err(AppError::InternalServerError);
     }
 
-    let mut new_m_file = MFile::from_update_request(_m_file_request, _existing_data);
-    new_m_file.file_path = Some(file_path);
-    new_m_file.file_type = Some(file_type);
-    new_m_file.file_name = Some(file_name);
+    _existing_data.file_name = Some(file_name);
+    _existing_data.file_type = Some(file_type);
+    _existing_data.file_path = Some(file_path.clone());
+    _existing_data.modified_by = Some(user_id);
+    _existing_data.modified_on = Some(today_chrono);
 
-    let result = repository::update_mfile(&mut db_conn, new_m_file.clone());
+    let result = repository::insert_mfile(&mut db_conn, _existing_data.clone());
 
     match result {
         Ok(_) => {}
@@ -327,7 +330,7 @@ pub async fn update(
             status: status_code.as_u16(),
             message: "success".to_owned(),
             timestamp: chrono::Utc::now().naive_utc(),
-            data: Some(new_m_file),
+            data: Some(_existing_data),
             error: None,
         }),
     ))

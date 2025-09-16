@@ -70,6 +70,8 @@ diesel::table! {
         file -> Nullable<Blob>,
         #[max_length = 255]
         file_path -> Nullable<Varchar>,
+        
+        module_id -> Nullable<Bigint>,
         is_delete -> Bool,
         #[max_length = 50]
         file_type -> Nullable<Varchar>,

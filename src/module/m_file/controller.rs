@@ -232,7 +232,7 @@ pub async fn update(
         }
     };
 
-    let mut _new_m_file = <MFile>::new(String::new(), String::new(), String::new());
+    let mut _new_m_file: MFile;
     let existing_biodata_result = repository::find_by_id(&mut db_conn, m_file_request.id.unwrap());
     match existing_biodata_result {
         Ok(None) => {

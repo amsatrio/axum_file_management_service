@@ -87,7 +87,6 @@ pub fn update_mfile(
             is_delete.eq(mfile.is_delete),
             file_name.eq(mfile.file_name),
             file_type.eq(mfile.file_type),
-            file.eq(mfile.file),
             file_path.eq(mfile.file_path),
         ))
         .execute(conn)

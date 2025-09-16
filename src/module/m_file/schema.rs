@@ -23,8 +23,8 @@ pub struct MFile {
     pub id: i64,
     pub file_name: Option<String>,
     pub file_type: Option<String>,
-    pub file: Option<Vec<u8>>,
     pub file_path: Option<String>,
+    pub module_id: Option<i64>,
     pub created_by: i64,
     #[serde(with = "date_serializer")]
     pub created_on: NaiveDateTime,
@@ -38,15 +38,15 @@ pub struct MFile {
 }
 
 impl MFile {
-    pub fn new(file_name: String, file_type: String, file_path: String) -> MFile {
+    pub fn new(file_name: String, file_type: String, file_path: String, module_id: i64, user_id: i64) -> MFile {
         let date_now = chrono::Utc::now().naive_utc();
         MFile {
             id: date_now.and_utc().timestamp(),
             file_name: Some(file_name),
             file_type: Some(file_type),
-            file: None,
             file_path: Some(file_path),
-            created_by: 0,
+            module_id: Some(module_id),
+            created_by: user_id,
             created_on: date_now,
             modified_by: None,
             modified_on: None,
@@ -61,16 +61,16 @@ impl MFile {
         let mut deleted_by: Option<i64> = None;
         let mut deleted_on: Option<NaiveDateTime> = None;
         if is_delete {
-            deleted_by = Some(0);
+            deleted_by = request.user_id;
             deleted_on = Some(date_now);
         }
         MFile {
             id: request.id.unwrap(),
             file_name: request.file_name,
             file_type: request.file_type,
-            file: None,
             file_path: request.file_path,
-            created_by: 0,
+            module_id: request.module_id,
+            created_by: request.user_id.unwrap_or(0),
             created_on: date_now,
             modified_by: None,
             modified_on: None,
@@ -85,18 +85,18 @@ impl MFile {
         let mut deleted_by: Option<i64> = None;
         let mut deleted_on: Option<NaiveDateTime> = None;
         if is_delete {
-            deleted_by = Some(0);
+            deleted_by = request.user_id;
             deleted_on = Some(date_now);
         }
         MFile {
             id: request.id.unwrap(),
             file_name: request.file_name,
             file_type: request.file_type,
-            file: None,
             file_path: request.file_path,
+            module_id: request.module_id,
             created_by: existing.created_by,
             created_on: existing.created_on,
-            modified_by: Some(0),
+            modified_by: request.user_id,
             modified_on: Some(date_now),
             deleted_by: deleted_by,
             deleted_on: deleted_on,
@@ -118,6 +118,8 @@ pub struct MFileRequest {
         length(min = 3, message = "must be greater than 3 chars"),
         required(message = "mandatory")
     )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
     pub file_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_type: Option<String>,
@@ -126,21 +128,45 @@ pub struct MFileRequest {
     #[validate(required(message = "mandatory"))]
     pub is_delete: Option<bool>,
     #[validate(required(message = "mandatory"))]
-    pub module_name: Option<String>,
+    pub module_id: Option<i64>,
     #[validate(required(message = "mandatory"))]
     pub user_id: Option<i64>,
 }
 
 impl MFileRequest {
-    pub fn new(id: Option<i64>, file_name: Option<String>, file_type: Option<String>, file_path: Option<String>, module_name: Option<String>, user_id: Option<i64>) -> MFileRequest {
+    pub fn new(id: Option<i64>, file_name: Option<String>, file_type: Option<String>, file_path: Option<String>, module_id: Option<i64>, user_id: Option<i64>) -> MFileRequest {
         MFileRequest {
             id: id,
+            file: None,
             file_name: file_name,
             file_type: file_type,
             file_path: file_path,
             is_delete: Some(false),
-            module_name: module_name,
+            module_id: module_id,
             user_id: user_id
         }
     }
+}
+
+
+#[derive(Debug, Deserialize, Serialize, Validate)]
+pub struct MFileResponse {
+    #[validate(
+        range(min = 1, max = 999999, message = "must be between 1-999999 chars"),
+        required(message = "mandatory")
+    )]
+    pub id: Option<i64>,
+    #[validate(
+        length(min = 3, message = "must be greater than 3 chars"),
+        required(message = "mandatory")
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+    pub file_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+    #[validate(required(message = "mandatory"))]
+    pub module_id: Option<i64>,
 }

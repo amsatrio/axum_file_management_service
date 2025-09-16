@@ -49,7 +49,7 @@ async fn main() {
         .layer(DefaultBodyLimit::disable())
         // Set a different limit
         .layer(RequestBodyLimitLayer::new(
-            250 * 1024 * 1024, /* 250mb */
+            250 * 1024 * 1024,
         ))
         .route_layer(from_fn(logger_middleware::log_request))
         .layer(Extension(shared_state))
