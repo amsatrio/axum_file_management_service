@@ -4,7 +4,6 @@ pipeline {
         stage('Docker Build') { 
             agent any
             steps {
-                sh 'docker rmi -f localhost:4000/axum-file-management-service:latest'
                 sh 'docker compose -f ./container/docker/compose.yaml build'
             }
         }

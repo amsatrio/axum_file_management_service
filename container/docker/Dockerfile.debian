@@ -24,13 +24,15 @@ RUN RUST_BACKTRACE=1 cargo build --release
 RUN mv /app/target/release/axum_file_management_service /app/app
 
 # Production stage
-FROM debian:bookworm-slim
+FROM localhost:4000/axum-file-management-service
 
 RUN apt-get update
 RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq5 openssl sqlite3 libsqlite3-dev -y
 RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/axum_file_management
+
+RUN rm -rf /opt/axum_file_management/app
 
 COPY --from=builder /app/app .
 COPY --from=builder /app/static static/
