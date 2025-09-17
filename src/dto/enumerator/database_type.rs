@@ -5,7 +5,6 @@ use serde::Deserialize;
 #[serde(field_identifier, rename_all = "lowercase")]
 pub enum DatabaseType {
     MySQL,
-    MariaDB,
     Postgres,
     Sqlite,
 }

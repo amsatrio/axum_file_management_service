@@ -1,5 +1,13 @@
 # axum_file_management_service
 
+## file api
+- [x] Upload
+- [x] Download
+- [ ] Rename
+- [ ] Copy
+- [ ] Move
+- [ ] Create dir
+
 ## Requirements
 ### rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh

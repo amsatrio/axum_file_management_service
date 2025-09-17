@@ -39,6 +39,6 @@ envy = "0.4.2"
 # database
 bb8 = "0.9.0"
 # diesel-async = { version = "0.6.1", features = ["postgres", "bb8"] }
-diesel = {version = "2.2.12", features = ["r2d2", "mysql", "chrono", "postgres"]}
+diesel = {version = "2.3.0", features = ["r2d2", "mysql", "chrono", "postgres", "sqlite", "returning_clauses_for_sqlite_3_35"]}
 redis = { version = "0.32.5", features = ["tokio-comp"] }
 regex = "1.11.2"

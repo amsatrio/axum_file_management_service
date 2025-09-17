@@ -71,36 +71,28 @@ impl Environment {
     }
 
     pub fn get_database_url(&self) -> String {
-        if self.database_type == DatabaseType::MariaDB {
-            return format!(
-                "mysql://{0}:{1}@{2}/{3}",
-                self.database_username,
-                self.database_password,
-                self.database_host,
-                self.database_dbname
-            );
+        match self.database_type {
+            DatabaseType::MySQL => {
+                return format!(
+                    "mysql://{0}:{1}@{2}/{3}",
+                    self.database_username,
+                    self.database_password,
+                    self.database_host,
+                    self.database_dbname
+                );
+            }
+            DatabaseType::Postgres => {
+                return format!(
+                    "postgresql://postgres:{0}:{1}@{2}/{3}",
+                    self.database_username,
+                    self.database_password,
+                    self.database_host,
+                    self.database_dbname
+                );
+            }
+            DatabaseType::Sqlite => {
+                return format!("{0}", self.database_path);
+            }
         }
-
-        if self.database_type == DatabaseType::Sqlite {
-            return format!("{0}", self.database_path);
-        }
-
-        if self.database_type == DatabaseType::Postgres {
-            return format!(
-                "postgresql://postgres:{0}:{1}@{2}/{3}",
-                self.database_username,
-                self.database_password,
-                self.database_host,
-                self.database_dbname
-            );
-        }
-
-        format!(
-            "mysql://{0}:{1}@{2}/{3}",
-            self.database_username,
-            self.database_password,
-            self.database_host,
-            self.database_dbname
-        )
     }
 }

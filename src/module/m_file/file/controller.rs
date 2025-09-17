@@ -11,6 +11,7 @@ use tokio::{
     fs::{File, remove_file},
     io::{AsyncReadExt, AsyncWriteExt},
 };
+use validator::Validate;
 
 use crate::{
     dto::{
@@ -19,18 +20,19 @@ use crate::{
     },
     module::m_file::{
         repository,
-        schema::MFile,
+        schema::{MFile, MFileCopyMoveRequest, MFileRenameRequest, MFileRequest},
     },
     state::AppState,
 };
 
-pub async fn create(
+pub async fn upload(
     Extension(_state): Extension<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<AppResponse<MFile>>), AppError> {
-    let mut data: Bytes = <Bytes>::new();
+    let mut file_bytes: Bytes = <Bytes>::new();
     let mut file_name: String = String::new();
     let mut file_type: String = String::new();
+    let mut file_size: String = String::new();
     let mut module_id: i64 = 0;
     let mut user_id: i64 = 0;
     let mut id: i64 = 0;
@@ -41,7 +43,8 @@ pub async fn create(
         if field_name == "file".to_string() {
             file_name = field.file_name().unwrap_or("").to_string();
             file_type = field.content_type().unwrap_or("").to_string();
-            data = field.bytes().await.unwrap();
+            file_bytes = field.bytes().await.unwrap();
+            file_size = file_bytes.len().to_string();
 
             let category = match file_type.as_str() {
                 // Image types
@@ -153,14 +156,16 @@ pub async fn create(
     }
 
     // save data to file
-    let status_write_data = file.unwrap().write_all(&data).await.map_err(|e| {
+    let status_write_data = file.unwrap().write_all(&file_bytes).await.map_err(|e| {
         log::error!("Failed to write to file: {}", e);
     });
     if status_write_data.is_err() {
         return Err(AppError::InternalServerError);
     }
 
-    let new_m_file = MFile::new(file_name, file_type, file_path, module_id, user_id);
+    let new_m_file = MFile::new(
+        file_name, file_type, file_path, file_size, module_id, user_id,
+    );
 
     let result = repository::insert_mfile(&mut db_conn, new_m_file.clone());
 
@@ -188,9 +193,10 @@ pub async fn update(
     Extension(_state): Extension<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<AppResponse<MFile>>), AppError> {
-    let mut data: Bytes = <Bytes>::new();
+    let mut file_bytes: Bytes = <Bytes>::new();
     let mut file_name: String = String::new();
     let mut file_type: String = String::new();
+    let mut file_size: String = String::new();
     let mut user_id: i64 = 0;
     let mut id: i64 = 0;
 
@@ -200,7 +206,8 @@ pub async fn update(
         if field_name == "file".to_string() {
             file_name = field.file_name().unwrap_or("").to_string();
             file_type = field.content_type().unwrap_or("").to_string();
-            data = field.bytes().await.unwrap();
+            file_bytes = field.bytes().await.unwrap();
+            file_size = file_bytes.len().to_string();
 
             let category = match file_type.as_str() {
                 // Image types
@@ -254,7 +261,6 @@ pub async fn update(
         }
     };
 
-    let today = Local::now();
     let today_chrono = chrono::Utc::now().naive_utc();
 
     // check existing data
@@ -273,10 +279,10 @@ pub async fn update(
         }
     };
 
-    let file_path = _existing_data.file_path.unwrap();
+    let _existing_file_path = _existing_data.file_path.unwrap();
 
     // check existing file
-    let result_file_exist = std::fs::exists(file_path.clone());
+    let result_file_exist = std::fs::exists(_existing_file_path.clone());
     match result_file_exist {
         Ok(_value) => {
             if !_value {
@@ -290,38 +296,41 @@ pub async fn update(
     };
 
     // remove exsiting data
-    let _ = std::fs::remove_file(file_path.clone());
+    let _ = std::fs::remove_file(_existing_file_path.clone());
+
+    let mut file_path: String = _existing_file_path.clone();
+    if let Some((value, _)) = _existing_file_path.rsplit_once('/') {
+        file_path = format!("{}/{}", value.to_string(), file_name);
+    }
 
     // create file
-    let file = File::create(file_path.clone()).await.map_err(|e| {
+    let result_file = File::create(file_path.clone()).await.map_err(|e| {
         log::error!("Failed to create file: {}", e);
     });
-    if file.is_err() {
+    if result_file.is_err() {
         return Err(AppError::InternalServerError);
     }
 
     // save data to file
-    let status_write_data = file.unwrap().write_all(&data).await.map_err(|e| {
-        log::error!("Failed to write to file: {}", e);
-    });
+    let status_write_data = result_file
+        .unwrap()
+        .write_all(&file_bytes)
+        .await
+        .map_err(|e| {
+            log::error!("Failed to write file: {}", e);
+        });
     if status_write_data.is_err() {
         return Err(AppError::InternalServerError);
     }
 
+    _existing_data.file_size = Some(file_size);
     _existing_data.file_name = Some(file_name);
     _existing_data.file_type = Some(file_type);
     _existing_data.file_path = Some(file_path.clone());
     _existing_data.modified_by = Some(user_id);
     _existing_data.modified_on = Some(today_chrono);
 
-    let result = repository::insert_mfile(&mut db_conn, _existing_data.clone());
-
-    match result {
-        Ok(_) => {}
-        Err(value) => {
-            return Err(value);
-        }
-    };
+    repository::insert_mfile(&mut db_conn, _existing_data.clone())?;
 
     let status_code = StatusCode::OK;
     Ok((
@@ -336,7 +345,7 @@ pub async fn update(
     ))
 }
 
-pub async fn find_by_id(
+pub async fn download(
     Extension(_state): Extension<Arc<AppState>>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
@@ -394,7 +403,7 @@ pub async fn find_by_id(
     return open_file_response;
 }
 
-pub async fn delete_by_id(
+pub async fn delete_file(
     Extension(_state): Extension<Arc<AppState>>,
     Path(id): Path<i64>,
 ) -> Result<(StatusCode, Json<AppResponse<String>>), AppError> {
@@ -426,13 +435,7 @@ pub async fn delete_by_id(
         }
     };
 
-    let _delete_result = repository::delete_by_id(&mut db_conn, id);
-    match _delete_result {
-        Ok(_) => {}
-        Err(error) => {
-            return Err(error.into());
-        }
-    };
+    let _delete_result = repository::delete_by_id(&mut db_conn, id)?;
 
     let file_path = PathBuf::from(_file_path_string);
 
@@ -444,6 +447,113 @@ pub async fn delete_by_id(
     return Ok((
         status_code,
         Json(AppResponse::<String> {
+            status: status_code.as_u16(),
+            message: "success".to_owned(),
+            timestamp: chrono::Utc::now().naive_utc(),
+            data: None,
+            error: None,
+        }),
+    ));
+}
+
+pub async fn rename(
+    Extension(_state): Extension<Arc<AppState>>,
+    Json(m_file_rename_request): Json<MFileRenameRequest>,
+) -> Result<(StatusCode, Json<AppResponse<String>>), AppError> {
+    let _is_valid = match m_file_rename_request.validate() {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(AppError::InvalidRequest(error).into());
+        }
+    };
+
+    // get db connection
+    let db_conn_result = _state.diesel_pool_mysql.get();
+    let mut db_conn;
+    match db_conn_result {
+        Ok(value) => {
+            db_conn = value;
+        }
+        Err(error) => {
+            return Err(AppError::Other(format!("get connection failed {error}")).into());
+        }
+    };
+
+    let status_code = StatusCode::OK;
+    return Ok((
+        status_code,
+        Json(AppResponse {
+            status: status_code.as_u16(),
+            message: "success".to_owned(),
+            timestamp: chrono::Utc::now().naive_utc(),
+            data: None,
+            error: None,
+        }),
+    ));
+}
+
+pub async fn copy(
+    Extension(_state): Extension<Arc<AppState>>,
+    Json(m_file_copy_move_request): Json<MFileCopyMoveRequest>,
+) -> Result<(StatusCode, Json<AppResponse<String>>), AppError> {
+    let _is_valid = match m_file_copy_move_request.validate() {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(AppError::InvalidRequest(error).into());
+        }
+    };
+
+    // get db connection
+    let db_conn_result = _state.diesel_pool_mysql.get();
+    let mut db_conn;
+    match db_conn_result {
+        Ok(value) => {
+            db_conn = value;
+        }
+        Err(error) => {
+            return Err(AppError::Other(format!("get connection failed {error}")).into());
+        }
+    };
+
+    let status_code = StatusCode::OK;
+    return Ok((
+        status_code,
+        Json(AppResponse {
+            status: status_code.as_u16(),
+            message: "success".to_owned(),
+            timestamp: chrono::Utc::now().naive_utc(),
+            data: None,
+            error: None,
+        }),
+    ));
+}
+pub async fn move_file(
+    Extension(_state): Extension<Arc<AppState>>,
+    Json(m_file_copy_move_request): Json<MFileCopyMoveRequest>,
+) -> Result<(StatusCode, Json<AppResponse<String>>), AppError> {
+    let _is_valid = match m_file_copy_move_request.validate() {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(AppError::InvalidRequest(error).into());
+        }
+    };
+
+    // get db connection
+    let db_conn_result = _state.diesel_pool_mysql.get();
+    let mut db_conn;
+    match db_conn_result {
+        Ok(value) => {
+            db_conn = value;
+        }
+        Err(error) => {
+            return Err(AppError::Other(format!("get connection failed {error}")).into());
+        }
+    };
+
+    let status_code = StatusCode::OK;
+    return Ok((
+        status_code,
+        Json(AppResponse {
             status: status_code.as_u16(),
             message: "success".to_owned(),
             timestamp: chrono::Utc::now().naive_utc(),

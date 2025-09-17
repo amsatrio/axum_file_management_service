@@ -24,6 +24,7 @@ pub struct MFile {
     pub file_name: Option<String>,
     pub file_type: Option<String>,
     pub file_path: Option<String>,
+    pub file_size: Option<String>,
     pub module_id: Option<i64>,
     pub created_by: i64,
     #[serde(with = "date_serializer")]
@@ -38,13 +39,14 @@ pub struct MFile {
 }
 
 impl MFile {
-    pub fn new(file_name: String, file_type: String, file_path: String, module_id: i64, user_id: i64) -> MFile {
+    pub fn new(file_name: String, file_type: String, file_path: String, file_size: String, module_id: i64, user_id: i64) -> MFile {
         let date_now = chrono::Utc::now().naive_utc();
         MFile {
             id: date_now.and_utc().timestamp(),
             file_name: Some(file_name),
             file_type: Some(file_type),
             file_path: Some(file_path),
+            file_size: Some(file_size),
             module_id: Some(module_id),
             created_by: user_id,
             created_on: date_now,
@@ -69,6 +71,7 @@ impl MFile {
             file_name: request.file_name,
             file_type: request.file_type,
             file_path: request.file_path,
+            file_size: request.file_size,
             module_id: request.module_id,
             created_by: request.user_id.unwrap_or(0),
             created_on: date_now,
@@ -93,6 +96,7 @@ impl MFile {
             file_name: request.file_name,
             file_type: request.file_type,
             file_path: request.file_path,
+            file_size: request.file_size,
             module_id: request.module_id,
             created_by: existing.created_by,
             created_on: existing.created_on,
@@ -118,13 +122,13 @@ pub struct MFileRequest {
         length(min = 3, message = "must be greater than 3 chars"),
         required(message = "mandatory")
     )]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file: Option<String>,
     pub file_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<String>,
     #[validate(required(message = "mandatory"))]
     pub is_delete: Option<bool>,
     #[validate(required(message = "mandatory"))]
@@ -137,15 +141,45 @@ impl MFileRequest {
     pub fn new(id: Option<i64>, file_name: Option<String>, file_type: Option<String>, file_path: Option<String>, module_id: Option<i64>, user_id: Option<i64>) -> MFileRequest {
         MFileRequest {
             id: id,
-            file: None,
             file_name: file_name,
             file_type: file_type,
             file_path: file_path,
+            file_size: None,
             is_delete: Some(false),
             module_id: module_id,
             user_id: user_id
         }
     }
+}
+
+
+#[derive(Debug, Deserialize, Serialize, Validate)]
+pub struct MFileRenameRequest {
+    #[validate(
+        range(min = 1, max = 999999, message = "must be between 1-999999 chars"),
+        required(message = "mandatory")
+    )]
+    pub id: Option<i64>,
+    #[validate(
+        length(min = 3, message = "must be greater than 3 chars"),
+        required(message = "mandatory")
+    )]
+    pub file_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Validate)]
+pub struct MFileCopyMoveRequest {
+    #[validate(
+        range(min = 1, max = 999999, message = "must be between 1-999999 chars"),
+        required(message = "mandatory")
+    )]
+    pub id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<i64>,
 }
 
 
@@ -160,13 +194,15 @@ pub struct MFileResponse {
         length(min = 3, message = "must be greater than 3 chars"),
         required(message = "mandatory")
     )]
+    pub file_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
-    pub file_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<String>,
     #[validate(required(message = "mandatory"))]
     pub module_id: Option<i64>,
 }
