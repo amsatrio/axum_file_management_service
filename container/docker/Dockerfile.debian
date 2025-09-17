@@ -27,7 +27,7 @@ RUN mv /app/target/release/axum_file_management_service /app/app
 FROM debian:bookworm-slim
 
 RUN apt-get update
-RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq5 opensslsqlite3 libsqlite3-dev -y
+RUN apt-get install pkg-config libssl-dev default-libmysqlclient-dev libmariadb-dev libpq5 openssl sqlite3 libsqlite3-dev -y
 RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/axum_file_management
