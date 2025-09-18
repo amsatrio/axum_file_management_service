@@ -43,5 +43,7 @@ COPY --from=builder /app/log4rs.yml .
 
 ENV RUST_BACKTRACE=1
 
+EXPOSE 8003
+
 # Run app
 CMD ["/opt/axum_file_management/app"]
