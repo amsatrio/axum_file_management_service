@@ -8,22 +8,19 @@ use axum::{
 };
 use chrono::{Datelike, Local};
 use tokio::{
-    fs::{File, remove_file},
+    fs::{File},
     io::{AsyncReadExt, AsyncWriteExt},
 };
 use validator::Validate;
 
 use crate::{
-    diesel_schema::m_file,
-    dto::{
+    config::environment::CONFIG, dto::{
         enumerator::file_type::FileType,
         response::{app_error::AppError, app_response::AppResponse},
-    },
-    module::m_file::{
+    }, module::m_file::{
         repository,
-        schema::{MFile, MFileCopyMoveRequest, MFileRenameRequest, MFileRequest},
-    },
-    state::AppState,
+        schema::{MFile, MFileCopyMoveRequest, MFileRenameRequest},
+    }, state::AppState
 };
 
 pub async fn upload(
@@ -110,7 +107,8 @@ pub async fn upload(
     let today = Local::now();
     let _date_string = format!("{}/{:02}/{:02}", today.year(), today.month(), today.day());
 
-    let dir_path = format!("/data/{}/{}/{}", module_id, user_id, file_type);
+    let config = &CONFIG;
+    let dir_path = format!("{}/{}/{}/{}", config.file_root_dir, module_id, user_id, file_type);
     let file_path = format!("{}/{}", dir_path, file_name);
 
     let status_create_dir = tokio::fs::create_dir_all(dir_path).await;
@@ -281,7 +279,7 @@ pub async fn update(
     let _existing_file_path = _existing_data.file_path.unwrap();
 
     // check existing file
-    let result_file_exist = std::fs::exists(_existing_file_path.clone());
+    let result_file_exist = tokio::fs::try_exists(_existing_file_path.clone()).await;
     match result_file_exist {
         Ok(_value) => {
             if !_value {

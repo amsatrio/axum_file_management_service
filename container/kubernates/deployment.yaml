@@ -32,4 +32,4 @@ spec:
               cpu: "1"
           volumeMounts:
             - name: axum-file-management-volume
-              mountPath: "/data"
+              mountPath: "/mnt/data"

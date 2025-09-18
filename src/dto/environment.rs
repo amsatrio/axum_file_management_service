@@ -48,6 +48,8 @@ pub struct Environment {
     pub session_name: String,
     pub session_secure: bool,
     pub session_timeout: i64,
+
+    pub file_root_dir: String,
 }
 
 impl Environment {
