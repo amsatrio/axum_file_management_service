@@ -1,6 +1,6 @@
 use diesel::{r2d2, MysqlConnection, PgConnection, SqliteConnection};
 
-use crate::{config::environment::CONFIG, dto::enumerator::database_type::DatabaseType};
+use crate::{config::environment::CONFIG};
 
 /// Initialize database connection pool based on `DATABASE_URL` environment variable.
 ///

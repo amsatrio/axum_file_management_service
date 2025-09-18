@@ -14,6 +14,7 @@ use tokio::{
 use validator::Validate;
 
 use crate::{
+    diesel_schema::m_file,
     dto::{
         enumerator::file_type::FileType,
         response::{app_error::AppError, app_response::AppResponse},
@@ -112,14 +113,14 @@ pub async fn upload(
     let dir_path = format!("/data/{}/{}/{}", module_id, user_id, file_type);
     let file_path = format!("{}/{}", dir_path, file_name);
 
-    let status_create_dir = std::fs::create_dir_all(dir_path);
+    let status_create_dir = tokio::fs::create_dir_all(dir_path).await;
     if status_create_dir.is_err() {
         log::info!("create dir failed");
         return Err(AppError::InternalServerError);
     }
 
     // check existing file
-    let result_file_exist = std::fs::exists(file_path.clone());
+    let result_file_exist = tokio::fs::try_exists(file_path.clone()).await;
     match result_file_exist {
         Ok(_value) => {
             if _value {
@@ -261,8 +262,6 @@ pub async fn update(
         }
     };
 
-    let today_chrono = chrono::Utc::now().naive_utc();
-
     // check existing data
     let _existing_data_result = repository::find_by_id(&mut db_conn, id);
     let mut _existing_data: MFile;
@@ -296,7 +295,7 @@ pub async fn update(
     };
 
     // remove exsiting data
-    let _ = std::fs::remove_file(_existing_file_path.clone());
+    let _ = tokio::fs::remove_file(_existing_file_path.clone());
 
     let mut file_path: String = _existing_file_path.clone();
     if let Some((value, _)) = _existing_file_path.rsplit_once('/') {
@@ -323,6 +322,8 @@ pub async fn update(
         return Err(AppError::InternalServerError);
     }
 
+    let today_chrono = chrono::Utc::now().naive_utc();
+
     _existing_data.file_size = Some(file_size);
     _existing_data.file_name = Some(file_name);
     _existing_data.file_type = Some(file_type);
@@ -330,7 +331,7 @@ pub async fn update(
     _existing_data.modified_by = Some(user_id);
     _existing_data.modified_on = Some(today_chrono);
 
-    repository::insert_mfile(&mut db_conn, _existing_data.clone())?;
+    repository::update_mfile(&mut db_conn, _existing_data.clone())?;
 
     let status_code = StatusCode::OK;
     Ok((
@@ -439,7 +440,7 @@ pub async fn delete_file(
 
     let file_path = PathBuf::from(_file_path_string);
 
-    let _remove_file_result = remove_file(file_path.clone())
+    let _remove_file_result = tokio::fs::remove_file(file_path.clone())
         .await
         .map_err(|error| AppError::Other(format!("remove file failed: {}", error)))?;
 
@@ -479,6 +480,41 @@ pub async fn rename(
         }
     };
 
+    // find existing data
+    let mut _existing_data: MFile;
+    let find_by_id_result = repository::find_by_id(&mut db_conn, m_file_rename_request.id.unwrap());
+    match find_by_id_result {
+        Ok(Some(value)) => {
+            _existing_data = value;
+        }
+        Ok(None) => {
+            return Err(AppError::NotFound);
+        }
+        Err(error) => {
+            return Err(error);
+        }
+    };
+
+    // rename file
+    let new_filename = m_file_rename_request.file_name.unwrap();
+    let existing_file_path = _existing_data.file_path.unwrap();
+    let mut new_file_path: String = existing_file_path.clone();
+    if let Some((value, _)) = existing_file_path.rsplit_once('/') {
+        new_file_path = format!("{}/{}", value.to_string(), new_filename.clone());
+    }
+
+    tokio::fs::rename(existing_file_path, new_file_path.clone())
+        .await.map_err(|err| AppError::Other(format!("rename file error {err}")))?;
+
+    // update data in database
+    let today_chrono = chrono::Utc::now().naive_utc();
+    _existing_data.file_path = Some(new_file_path);
+    _existing_data.file_name = Some(new_filename);
+    _existing_data.modified_by = Some(m_file_rename_request.user_id.unwrap());
+    _existing_data.modified_on = Some(today_chrono);
+
+    repository::update_mfile(&mut db_conn, _existing_data.clone())?;
+
     let status_code = StatusCode::OK;
     return Ok((
         status_code,
@@ -515,6 +551,37 @@ pub async fn copy(
         }
     };
 
+    // find existing data
+    let mut _existing_data: MFile;
+    let find_by_id_result =
+        repository::find_by_id(&mut db_conn, m_file_copy_move_request.id.unwrap());
+    match find_by_id_result {
+        Ok(Some(value)) => {
+            _existing_data = value;
+        }
+        Ok(None) => {
+            return Err(AppError::NotFound);
+        }
+        Err(error) => {
+            return Err(error);
+        }
+    };
+
+    // rename file
+    let new_file_path = m_file_copy_move_request.file_path.unwrap();
+    let existing_file_path = _existing_data.file_path.unwrap();
+
+    tokio::fs::copy(existing_file_path, new_file_path.clone())
+        .await.map_err(|err| AppError::Other(format!("rename file error {err}")))?;
+
+    // update data in database
+    let today_chrono = chrono::Utc::now().naive_utc();
+    _existing_data.file_path = Some(new_file_path);
+    _existing_data.modified_by = Some(m_file_copy_move_request.user_id.unwrap());
+    _existing_data.modified_on = Some(today_chrono);
+
+    repository::update_mfile(&mut db_conn, _existing_data.clone())?;
+
     let status_code = StatusCode::OK;
     return Ok((
         status_code,
@@ -527,6 +594,7 @@ pub async fn copy(
         }),
     ));
 }
+
 pub async fn move_file(
     Extension(_state): Extension<Arc<AppState>>,
     Json(m_file_copy_move_request): Json<MFileCopyMoveRequest>,
@@ -549,6 +617,43 @@ pub async fn move_file(
             return Err(AppError::Other(format!("get connection failed {error}")).into());
         }
     };
+
+    // find existing data
+    let mut _existing_data: MFile;
+    let find_by_id_result =
+        repository::find_by_id(&mut db_conn, m_file_copy_move_request.id.unwrap());
+    match find_by_id_result {
+        Ok(Some(value)) => {
+            _existing_data = value;
+        }
+        Ok(None) => {
+            return Err(AppError::NotFound);
+        }
+        Err(error) => {
+            return Err(error);
+        }
+    };
+
+    // move file
+    let new_file_path = m_file_copy_move_request.file_path.unwrap();
+    let existing_file_path = _existing_data.file_path.unwrap();
+
+    tokio::fs::copy(existing_file_path.clone(), new_file_path.clone())
+        .await.map_err(|err| AppError::Other(format!("copy file error {err}")))?;
+
+    let file_path_buf = PathBuf::from(existing_file_path);
+
+    let _remove_file_result = tokio::fs::remove_file(file_path_buf)
+        .await
+        .map_err(|error| AppError::Other(format!("remove old file failed: {}", error)))?;
+
+    // update data in database
+    let today_chrono = chrono::Utc::now().naive_utc();
+    _existing_data.file_path = Some(new_file_path);
+    _existing_data.modified_by = Some(m_file_copy_move_request.user_id.unwrap());
+    _existing_data.modified_on = Some(today_chrono);
+
+    repository::update_mfile(&mut db_conn, _existing_data.clone())?;
 
     let status_code = StatusCode::OK;
     return Ok((
