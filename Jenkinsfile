@@ -19,10 +19,10 @@ pipeline {
             agent any
             steps {
  				  sh '''
-				  kubectl apply -f container/kubernates/storage.yaml --validate=false
-                  kubectl apply -f container/kubernates/deployment.yaml --validate=false
-                  kubectl apply -f container/kubernates/service.yaml --validate=false
-                  kubectl rollout restart deployment/axum-file-management
+				  microk8s.kubectl apply -f container/kubernates/storage.yaml
+                  microk8s.kubectl apply -f container/kubernates/deployment.yaml
+                  microk8s.kubectl apply -f container/kubernates/service.yaml
+                  microk8s.kubectl rollout restart deployment/axum-file-management
 				  '''
             }
         }
