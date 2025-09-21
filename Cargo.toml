@@ -15,6 +15,8 @@ chrono = { version = "0.4.41", features = ["serde"] }
 serde={version = "1.0.219", features = ["derive"]}
 serde_json = "1.0.143"
 
+rdkafka = "0.38.0"
+
 lazy_static = "1.4"
 
 # log
@@ -42,3 +44,4 @@ bb8 = "0.9.0"
 diesel = {version = "2.3.0", features = ["r2d2", "mysql", "chrono", "postgres", "sqlite", "returning_clauses_for_sqlite_3_35"]}
 redis = { version = "0.32.5", features = ["tokio-comp"] }
 regex = "1.11.2"
+
