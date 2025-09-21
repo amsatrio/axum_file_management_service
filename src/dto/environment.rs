@@ -76,19 +76,21 @@ impl Environment {
         match self.database_type {
             DatabaseType::MySQL => {
                 return format!(
-                    "mysql://{0}:{1}@{2}/{3}",
+                    "mysql://{0}:{1}@{2}:{3}/{4}",
                     self.database_username,
                     self.database_password,
                     self.database_host,
+                    self.database_port,
                     self.database_dbname
                 );
             }
             DatabaseType::Postgres => {
                 return format!(
-                    "postgresql://postgres:{0}:{1}@{2}/{3}",
+                    "postgresql://postgres:{0}:{1}@{2}:{3}/{4}",
                     self.database_username,
                     self.database_password,
                     self.database_host,
+                    self.database_port,
                     self.database_dbname
                 );
             }

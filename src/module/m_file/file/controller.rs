@@ -162,9 +162,10 @@ pub async fn upload(
         return Err(AppError::InternalServerError);
     }
 
-    let new_m_file = MFile::new(
+    let mut new_m_file = MFile::new(
         file_name, file_type, file_path, file_size, module_id, user_id,
     );
+    new_m_file.id = id;
 
     let result = repository::insert_mfile(&mut db_conn, new_m_file.clone());
 
@@ -293,7 +294,7 @@ pub async fn update(
     };
 
     // remove exsiting data
-    let _ = tokio::fs::remove_file(_existing_file_path.clone());
+    let _ = tokio::fs::remove_file(_existing_file_path.clone()).await;
 
     let mut file_path: String = _existing_file_path.clone();
     if let Some((value, _)) = _existing_file_path.rsplit_once('/') {
@@ -565,20 +566,28 @@ pub async fn copy(
         }
     };
 
-    // rename file
-    let new_file_path = m_file_copy_move_request.file_path.unwrap();
-    let existing_file_path = _existing_data.file_path.unwrap();
+    // copy file
+    let mut new_file_path: String = String::new();
+    let mut new_file_name = String::new();
+    let existing_file_path = _existing_data.clone().file_path.unwrap();
+    if let Some((value_1,value_2)) = existing_file_path.rsplit_once('/') {
+        if let Some((value_3,value_4)) = value_2.rsplit_once('.') {
+            new_file_path = format!("{}/{}-copy.{}", value_1.to_string(), value_3.to_string(), value_4.to_string());
+            new_file_name = format!("{}-copy.{}", value_3.to_string(), value_4.to_string());
+        }
+    }
 
     tokio::fs::copy(existing_file_path, new_file_path.clone())
-        .await.map_err(|err| AppError::Other(format!("rename file error {err}")))?;
+        .await.map_err(|err| AppError::Other(format!("copy file error {err}")))?;
 
     // update data in database
-    let today_chrono = chrono::Utc::now().naive_utc();
-    _existing_data.file_path = Some(new_file_path);
-    _existing_data.modified_by = Some(m_file_copy_move_request.user_id.unwrap());
-    _existing_data.modified_on = Some(today_chrono);
+    let mut _new_data = _existing_data.clone();
+    let date_now = chrono::Utc::now().naive_utc();
+    _new_data.id = date_now.and_utc().timestamp();
+    _new_data.file_path = Some(new_file_path);
+    _new_data.file_name = Some(new_file_name);
 
-    repository::update_mfile(&mut db_conn, _existing_data.clone())?;
+    repository::insert_mfile(&mut db_conn, _new_data.clone())?;
 
     let status_code = StatusCode::OK;
     return Ok((
@@ -647,6 +656,9 @@ pub async fn move_file(
 
     // update data in database
     let today_chrono = chrono::Utc::now().naive_utc();
+    if let Some((_, value)) = new_file_path.rsplit_once('/') {
+        _existing_data.file_name = Some(value.to_string());
+    }
     _existing_data.file_path = Some(new_file_path);
     _existing_data.modified_by = Some(m_file_copy_move_request.user_id.unwrap());
     _existing_data.modified_on = Some(today_chrono);
