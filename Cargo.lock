@@ -172,6 +172,7 @@ dependencies = [
  "slog-stdlog",
  "slog-term",
  "tokio",
+ "tokio-util",
  "tower",
  "tower-http",
  "tracing",

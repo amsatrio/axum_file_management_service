@@ -8,19 +8,23 @@ use axum::{
 };
 use chrono::{Datelike, Local};
 use tokio::{
-    fs::{File},
+    fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
 };
+use tokio_util::io::ReaderStream;
 use validator::Validate;
 
 use crate::{
-    config::environment::CONFIG, dto::{
+    config::environment::CONFIG,
+    dto::{
         enumerator::file_type::FileType,
         response::{app_error::AppError, app_response::AppResponse},
-    }, module::m_file::{
+    },
+    module::m_file::{
         repository,
         schema::{MFile, MFileCopyMoveRequest, MFileRenameRequest},
-    }, state::AppState
+    },
+    state::AppState,
 };
 
 pub async fn upload(
@@ -58,7 +62,18 @@ pub async fn upload(
                     FileType::DOCUMENT
                 }
                 // Default case for unknown types
-                _ => FileType::UNKNOWN,
+                _ => {
+                    let path = std::path::Path::new(&file_name);
+                    if let Some(extension) = path.extension() {
+                        match extension.to_str().unwrap_or("") {
+                            "mp3" | "ogg" => FileType::AUDIO,
+                            "mp4" | "mkv" => FileType::VIDEO,
+                            _ => FileType::UNKNOWN,
+                        }
+                    } else {
+                        FileType::UNKNOWN
+                    }
+                }
             };
             file_type = category.to_string();
 
@@ -108,7 +123,10 @@ pub async fn upload(
     let _date_string = format!("{}/{:02}/{:02}", today.year(), today.month(), today.day());
 
     let config = &CONFIG;
-    let dir_path = format!("{}/{}/{}/{}", config.file_root_dir, module_id, user_id, file_type);
+    let dir_path = format!(
+        "{}/{}/{}/{}",
+        config.file_root_dir, module_id, user_id, file_type
+    );
     let file_path = format!("{}/{}", dir_path, file_name);
 
     let status_create_dir = tokio::fs::create_dir_all(dir_path).await;
@@ -403,6 +421,58 @@ pub async fn download(
     return open_file_response;
 }
 
+pub async fn stream(
+    Extension(_state): Extension<Arc<AppState>>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    // find path file by id
+    let mut _file_path_string = String::new();
+    let mut _file_name = String::new();
+    // get db connection
+    let db_conn_result = _state.diesel_pool_mysql.get();
+    let mut db_conn;
+    match db_conn_result {
+        Ok(value) => {
+            db_conn = value;
+        }
+        Err(error) => {
+            return Err(AppError::Other(format!("get connection failed {error}, id: {id}")).into());
+        }
+    };
+    let find_by_id_result = repository::find_by_id(&mut db_conn, id);
+    match find_by_id_result {
+        Ok(Some(value)) => {
+            _file_path_string = value.file_path.unwrap_or(String::new());
+            _file_name = value.file_name.unwrap_or(String::new());
+        }
+        Ok(None) => {
+            return Err(AppError::NotFound);
+        }
+        Err(error) => {
+            return Err(error);
+        }
+    };
+
+    let file_path = PathBuf::from(_file_path_string);
+
+    let file = File::open(&file_path)
+        .await
+        .map_err(|_| AppError::NotFound)?;
+
+    let stream = ReaderStream::new(file);
+
+    let response_builder: axum::http::Response<Body> = axum::http::Response::builder()
+        .header(
+            "Content-Disposition",
+            format!("attachment; filename=\"{}\"", _file_name),
+        )
+        .header("Content-Type", "application/octet-stream")
+        .body(Body::from_stream(stream))
+        .unwrap();
+
+    Ok(response_builder)
+}
+
 pub async fn delete_file(
     Extension(_state): Extension<Arc<AppState>>,
     Path(id): Path<i64>,
@@ -503,7 +573,8 @@ pub async fn rename(
     }
 
     tokio::fs::rename(existing_file_path, new_file_path.clone())
-        .await.map_err(|err| AppError::Other(format!("rename file error {err}")))?;
+        .await
+        .map_err(|err| AppError::Other(format!("rename file error {err}")))?;
 
     // update data in database
     let today_chrono = chrono::Utc::now().naive_utc();
@@ -570,15 +641,21 @@ pub async fn copy(
     let mut new_file_path: String = String::new();
     let mut new_file_name = String::new();
     let existing_file_path = _existing_data.clone().file_path.unwrap();
-    if let Some((value_1,value_2)) = existing_file_path.rsplit_once('/') {
-        if let Some((value_3,value_4)) = value_2.rsplit_once('.') {
-            new_file_path = format!("{}/{}-copy.{}", value_1.to_string(), value_3.to_string(), value_4.to_string());
+    if let Some((value_1, value_2)) = existing_file_path.rsplit_once('/') {
+        if let Some((value_3, value_4)) = value_2.rsplit_once('.') {
+            new_file_path = format!(
+                "{}/{}-copy.{}",
+                value_1.to_string(),
+                value_3.to_string(),
+                value_4.to_string()
+            );
             new_file_name = format!("{}-copy.{}", value_3.to_string(), value_4.to_string());
         }
     }
 
     tokio::fs::copy(existing_file_path, new_file_path.clone())
-        .await.map_err(|err| AppError::Other(format!("copy file error {err}")))?;
+        .await
+        .map_err(|err| AppError::Other(format!("copy file error {err}")))?;
 
     // update data in database
     let mut _new_data = _existing_data.clone();
@@ -646,7 +723,8 @@ pub async fn move_file(
     let existing_file_path = _existing_data.file_path.unwrap();
 
     tokio::fs::copy(existing_file_path.clone(), new_file_path.clone())
-        .await.map_err(|err| AppError::Other(format!("copy file error {err}")))?;
+        .await
+        .map_err(|err| AppError::Other(format!("copy file error {err}")))?;
 
     let file_path_buf = PathBuf::from(existing_file_path);
 
