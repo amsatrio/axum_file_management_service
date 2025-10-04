@@ -68,6 +68,7 @@ pub async fn upload(
                         match extension.to_str().unwrap_or("") {
                             "mp3" | "ogg" => FileType::AUDIO,
                             "mp4" | "mkv" => FileType::VIDEO,
+                            "jpg" | "jpeg" | "png" => FileType::IMAGE,
                             _ => FileType::UNKNOWN,
                         }
                     } else {
