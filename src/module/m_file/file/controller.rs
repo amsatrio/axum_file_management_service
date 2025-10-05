@@ -12,6 +12,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
 };
 use tokio_util::io::ReaderStream;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
@@ -128,7 +129,8 @@ pub async fn upload(
         "{}/{}/{}/{}",
         config.file_root_dir, module_id, user_id, file_type
     );
-    let file_path = format!("{}/{}", dir_path, file_name);
+    let uuid = Uuid::new_v4();
+    let file_path = format!("{}/{}", dir_path, uuid.to_string());
 
     let status_create_dir = tokio::fs::create_dir_all(dir_path).await;
     if status_create_dir.is_err() {
