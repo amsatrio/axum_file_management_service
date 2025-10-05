@@ -69,7 +69,7 @@ pub async fn upload(
                         match extension.to_str().unwrap_or("") {
                             "mp3" | "ogg" => FileType::AUDIO,
                             "mp4" | "mkv" => FileType::VIDEO,
-                            "jpg" | "jpeg" | "png" => FileType::IMAGE,
+                            "jpg" | "jpeg" | "png" | "webp" => FileType::IMAGE,
                             _ => FileType::UNKNOWN,
                         }
                     } else {
@@ -244,7 +244,19 @@ pub async fn update(
                     FileType::DOCUMENT
                 }
                 // Default case for unknown types
-                _ => FileType::UNKNOWN,
+                _ => {
+                    let path = std::path::Path::new(&file_name);
+                    if let Some(extension) = path.extension() {
+                        match extension.to_str().unwrap_or("") {
+                            "mp3" | "ogg" => FileType::AUDIO,
+                            "mp4" | "mkv" => FileType::VIDEO,
+                            "jpg" | "jpeg" | "png" | "webp" => FileType::IMAGE,
+                            _ => FileType::UNKNOWN,
+                        }
+                    } else {
+                        FileType::UNKNOWN
+                    }
+                }
             };
             file_type = category.to_string();
 
@@ -317,9 +329,11 @@ pub async fn update(
     // remove exsiting data
     let _ = tokio::fs::remove_file(_existing_file_path.clone()).await;
 
+    let uuid = Uuid::new_v4();
+
     let mut file_path: String = _existing_file_path.clone();
     if let Some((value, _)) = _existing_file_path.rsplit_once('/') {
-        file_path = format!("{}/{}", value.to_string(), file_name);
+        file_path = format!("{}/{}", value.to_string(), uuid.to_string());
     }
 
     // create file
